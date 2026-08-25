@@ -34,15 +34,14 @@ def baixar_tiktok_sem_marca(url):
         video_url = data["data"].get("hdplay") or data["data"].get("play")
         return requests.get(video_url).content
     else:
-        raise Exception("Não foi possível baixar o vídeo. Verifique se a conta/vídeo é pública.")
-
-# ---------------------------------------------------------
-# FUNÇÃO: Processamento de Vídeo Otimizado
+        raise Exception("Não foi possível baixar o vídeo. Verifique se a conta/vídeo é 
+   # ---------------------------------------------------------
+# FUNÇÃO: Processamento de Vídeo Ultra Rápido
 # ---------------------------------------------------------
 def processar_video(input_path, output_path, crop_percent, speed_factor, flip_video, boost_quality):
     clip = VideoFileClip(input_path)
     
-    # 1. Crop Leve (Apenas para ajustar bordas sem cortar textos)
+    # 1. Crop Leve
     if crop_percent > 0:
         w, h = clip.size
         crop_x = int(w * (crop_percent / 100))
@@ -53,28 +52,20 @@ def processar_video(input_path, output_path, crop_percent, speed_factor, flip_vi
     if speed_factor != 1.0:
         clip = clip.fx(vfx.speedx, speed_factor)
 
-    # 3. Espelhar apenas se selecionado (desativado por padrão para vídeos com texto)
+    # 3. Espelhar apenas se selecionado
     if flip_video:
         clip = clip.fx(vfx.mirror_x)
 
-    # 4. Ajuste Suave de Contraste/Nitidez (Sem estourar a imagem)
-    if boost_quality:
-        def otimizar_frame(frame):
-            img = Image.fromarray(frame)
-            # Melhora suave de contraste e nitidez
-            img = ImageEnhance.Contrast(img).enhance(1.08)
-            img = ImageEnhance.Sharpness(img).enhance(1.10)
-            return np.array(img)
-        
-        clip = clip.fl_image(otimizar_frame)
-
-    # Exportação em Alta Definição
+    # Exportação com preset "ultrafast" (Gera o vídeo em poucos segundos)
     clip.write_videofile(
         output_path,
         codec="libx264",
         audio_codec="aac",
-        bitrate="6000k",
-        preset="fast"
+        preset="ultrafast",
+        threads=4
+    )
+    clip.close()
+     preset="fast"
     )
     clip.close()
 
