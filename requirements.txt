@@ -1,5 +1,5 @@
-streamlit==1.32.0
-moviepy==1.0.3
-requests==2.31.0
-numpy==1.26.4
-Pillow==10.2.0
+streamlit
+moviepy
+requests
+numpy
+Pillow
