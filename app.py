@@ -1,29 +1,28 @@
-import streamlit as st
-import requests
-import tempfile
 import os
-from PIL import Image, ImageEnhance
+import tempfile
+import requests
+import streamlit as st
 import numpy as np
+from PIL import Image, ImageEnhance
 
 # Compatibilidade com MoviePy v1 e v2
 try:
     from moviepy.editor import VideoFileClip, vfx
 except ImportError:
     from moviepy import VideoFileClip, vfx
-from PIL import Image, ImageEnhance
 
 # Configuração da página para celular
 st.set_page_config(
-    page_title="ViralCut - Anti-Flop & Edição Automática",
+    page_title="ViralCut - Anti-Flop HD",
     page_icon="🚀",
     layout="centered"
 )
 
-st.title("🚀 ViralCut - Gerador de Vídeos Anti-Flop")
-st.caption("Transforme qualquer vídeo do TikTok em conteúdo inédito em HD para o algoritmo.")
+st.title("🚀 ViralCut - Edição & Anti-Flop")
+st.caption("Processe vídeos mantendo legendas nítidas e qualidade HD.")
 
 # ---------------------------------------------------------
-# FUNÇÃO 1: Download Limpo sem Marca d'Água (API TikWM)
+# FUNÇÃO: Download Limpo do TikTok (TikWM)
 # ---------------------------------------------------------
 def baixar_tiktok_sem_marca(url):
     api_url = "https://www.tikwm.com/api/"
@@ -32,108 +31,101 @@ def baixar_tiktok_sem_marca(url):
     data = response.json()
     
     if data.get("code") == 0:
-        # Puxa o link direto em HD sem marca d'água
         video_url = data["data"].get("hdplay") or data["data"].get("play")
-        video_bytes = requests.get(video_url).content
-        return video_bytes
+        return requests.get(video_url).content
     else:
-        raise Exception("Não foi possível extrair o vídeo. Verifique se o link é público.")
+        raise Exception("Não foi possível baixar o vídeo. Verifique se a conta/vídeo é pública.")
 
 # ---------------------------------------------------------
-# FUNÇÃO 2: Processamento Anti-Flop do Vídeo
+# FUNÇÃO: Processamento de Vídeo Otimizado
 # ---------------------------------------------------------
-def processar_video_antiflop(input_path, output_path, crop_percent, speed_factor, flip_video, boost_quality):
+def processar_video(input_path, output_path, crop_percent, speed_factor, flip_video, boost_quality):
     clip = VideoFileClip(input_path)
     
-    # 1. Crop Inteligente (Corta bordas para remover nomes de perfil e logos)
+    # 1. Crop Leve (Apenas para ajustar bordas sem cortar textos)
     if crop_percent > 0:
         w, h = clip.size
         crop_x = int(w * (crop_percent / 100))
         crop_y = int(h * (crop_percent / 100))
         clip = clip.crop(x1=crop_x, y1=crop_y, x2=w-crop_x, y2=h-crop_y)
 
-    # 2. Alteração de Velocidade (Engana o leitor de tempo do algoritmo)
+    # 2. Alteração de Velocidade Sutil (Anti-Flop)
     if speed_factor != 1.0:
         clip = clip.fx(vfx.speedx, speed_factor)
 
-    # 3. Inversão Espelhada (Muda o mapeamento de pixels)
+    # 3. Espelhar apenas se selecionado (desativado por padrão para vídeos com texto)
     if flip_video:
         clip = clip.fx(vfx.mirror_x)
 
-    # 4. Ajuste de Nitidez / Contraste (Efeito HD/4K)
+    # 4. Ajuste Suave de Contraste/Nitidez (Sem estourar a imagem)
     if boost_quality:
         def otimizar_frame(frame):
             img = Image.fromarray(frame)
-            # Aumenta contraste e nitidez
-            img = ImageEnhance.Contrast(img).enhance(1.15)
-            img = ImageEnhance.Sharpness(img).enhance(1.20)
+            # Melhora suave de contraste e nitidez
+            img = ImageEnhance.Contrast(img).enhance(1.08)
+            img = ImageEnhance.Sharpness(img).enhance(1.10)
             return np.array(img)
         
-        import numpy as np
         clip = clip.fl_image(otimizar_frame)
 
-    # Exportação com bitrate alto para manter qualidade de imagem
+    # Exportação em Alta Definição
     clip.write_videofile(
         output_path,
         codec="libx264",
         audio_codec="aac",
-        bitrate="5000k",
-        preset="ultrafast",
-        threads=4
+        bitrate="6000k",
+        preset="fast"
     )
     clip.close()
 
 # ---------------------------------------------------------
-# INTERFACE DO USUÁRIO (STREAMLIT)
+# INTERFACE
 # ---------------------------------------------------------
-tab1, tab2 = st.tabs(["🔗 Link do TikTok", "📁 Upload de Arquivo"])
-video_source_path = None
+tab1, tab2 = st.tabs(["🔗 Link do TikTok", "📁 Upload do Celular"])
 
 with tab1:
-    tiktok_url = st.text_input("Cole o link do vídeo do TikTok:")
-    if st.button("Puxar Vídeo do TikTok", type="primary"):
+    tiktok_url = st.text_input("Cole o link do TikTok:")
+    if st.button("Baixar Vídeo", type="primary"):
         if tiktok_url:
-            with st.spinner("Baixando vídeo sem marca d'água em HD..."):
+            with st.spinner("Baixando em HD sem marca d'água..."):
                 try:
                     video_bytes = baixar_tiktok_sem_marca(tiktok_url)
                     temp_in = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
                     temp_in.write(video_bytes)
                     temp_in.close()
                     st.session_state["video_path"] = temp_in.name
-                    st.success("Vídeo baixado sem marca d'água!")
+                    st.success("Vídeo carregado com sucesso!")
                 except Exception as e:
-                    st.error(f"Erro ao baixar: {e}")
-        else:
-            st.warning("Insira uma URL válida.")
+                    st.error(f"Erro: {e}")
 
 with tab2:
-    uploaded_file = st.file_uploader("Envie um vídeo da galeria do celular:", type=["mp4", "mov"])
+    uploaded_file = st.file_uploader("Envie um vídeo da galeria:", type=["mp4", "mov"])
     if uploaded_file is not None:
         temp_in = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         temp_in.write(uploaded_file.read())
         temp_in.close()
         st.session_state["video_path"] = temp_in.name
-        st.success("Arquivo carregado com sucesso!")
+        st.success("Arquivo carregado!")
 
-# Se houver vídeo pronto para edição
 if "video_path" in st.session_state and os.path.exists(st.session_state["video_path"]):
     st.divider()
-    st.subheader("⚙️ Configurações Anti-Flop & Edição")
+    st.subheader("⚙️ Opções de Otimização")
     
     col1, col2 = st.columns(2)
     with col1:
-        crop_val = st.slider("Corte das Bordas (Crop %):", 0, 10, 3, help="Remove nomes de perfis nas bordas.")
-        speed_val = st.slider("Velocidade do Vídeo:", 0.95, 1.10, 1.04, step=0.01, help="Muda o HASH do arquivo.")
+        crop_val = st.slider("Corte das Bordas (%):", 0, 5, 1, help="Evite valores altos se o vídeo tiver legendas nas bordas.")
+        speed_val = st.slider("Velocidade:", 0.98, 1.05, 1.02, step=0.01)
     
     with col2:
-        flip_val = st.checkbox("Espelhar Vídeo (Flip Horizontal)", value=True)
-        boost_val = st.checkbox("Melhorar Nitidez / Modo HD", value=True)
+        #value=False garante que textos e legendas NÃO fiquem ao contrário
+        flip_val = st.checkbox("Espelhar Vídeo (Apenas p/ vídeos SEM texto)", value=False)
+        boost_val = st.checkbox("Melhorar Nitidez HD", value=True)
 
-    if st.button("🚀 Processar Vídeo Anti-Flop", type="primary", use_container_width=True):
-        with st.spinner("Aplicando engenharia anti-flop e exportando..."):
+    if st.button("🚀 Processar Vídeo HD", type="primary", use_container_width=True):
+        with st.spinner("Processando..."):
             temp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
             try:
-                processar_video_antiflop(
+                processar_video(
                     st.session_state["video_path"],
                     temp_out,
                     crop_val,
@@ -146,14 +138,11 @@ if "video_path" in st.session_state and os.path.exists(st.session_state["video_p
                 
                 with open(temp_out, "rb") as file:
                     st.download_button(
-                        label="📥 BAIXAR VÍDEO PRONTO PARA VIRALIZAR",
+                        label="📥 BAIXAR VÍDEO PRONTO EM HD",
                         data=file,
-                        file_name="video_viral_antiflop.mp4",
+                        file_name="video_viral_hd.mp4",
                         mime="video/mp4",
                         use_container_width=True
                     )
             except Exception as err:
-                st.error(f"Erro durante o processamento: {err}")
-
-st.divider()
-st.info("💡 **Dica VIP:** Quer liberar acessos ilimitados e novos filtros? Adquira o plano pelo nosso Bot do Telegram.")
+                st.error(f"Erro no processamento: {err}")
