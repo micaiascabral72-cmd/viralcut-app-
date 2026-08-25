@@ -1,9 +1,15 @@
-import os
-import tempfile
-import requests
 import streamlit as st
-from moviepy.editor import VideoFileClip, vfx
-import moviepy.video.fx.all as vfx_all
+import requests
+import tempfile
+import os
+from PIL import Image, ImageEnhance
+import numpy as np
+
+# Compatibilidade com MoviePy v1 e v2
+try:
+    from moviepy.editor import VideoFileClip, vfx
+except ImportError:
+    from moviepy import VideoFileClip, vfx
 from PIL import Image, ImageEnhance
 
 # Configuração da página para celular
